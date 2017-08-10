@@ -1,0 +1,3 @@
+rootProject.name = 'AsyncStorageTimestamp'
+
+include ':app'
