@@ -1,32 +1,81 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- * @flow
- */
+// @flow
 
 import React, { Component } from 'react';
 import {
+  Alert,
   AppRegistry,
+  AsyncStorage,
+  Button,
+  ScrollView,
   StyleSheet,
   Text,
   View
 } from 'react-native';
+import BackgroundTask from 'react-native-background-task'
+
+function currentTimestamp(): string {
+  const d = new Date()
+  const z = n => n.toString().length == 1 ? `0${n}` : n // Zero pad
+  return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`
+}
+
+BackgroundTask.define(
+  async () => {
+    console.log('Hello from a background task')
+
+    const value = await AsyncStorage.getItem('@MySuperStore:times')
+    await AsyncStorage.setItem('@MySuperStore:times', `${value || ''}\n${currentTimestamp()}`)
+
+    // Or, instead of just setting a timestamp, do an http request
+    /* const response = await fetch('http://worldclockapi.com/api/json/utc/now')
+    const text = await response.text()
+    await AsyncStorage.setItem('@MySuperStore:times', text) */
+
+    BackgroundTask.finish()
+  },
+)
 
 export default class AsyncStorageTimestamp extends Component {
+  constructor() {
+    super()
+    this.state = {
+      text: '',
+    }
+  }
+
+  componentDidMount() {
+    BackgroundTask.schedule()
+    this.checkStatus()
+  }
+
+  async checkStatus() {
+    const status = await BackgroundTask.statusAsync()
+    console.log(status.available)
+  }
+
   render() {
     return (
-      <View style={styles.container}>
+      <ScrollView style={styles.container}>
         <Text style={styles.welcome}>
-          Welcome to React Native!
+          react-native-background-task!
         </Text>
         <Text style={styles.instructions}>
-          To get started, edit index.android.js
+          The defined task (storing the current timestamp in AsyncStorage)
+          should run while the app is in the background every 15 minutes.
         </Text>
         <Text style={styles.instructions}>
-          Double tap R on your keyboard to reload,{'\n'}
-          Shake or press menu button for dev menu
+          Press the button below to see the current value in storage.
         </Text>
-      </View>
+        <Button
+          onPress={async () => {
+            const value = await AsyncStorage.getItem('@MySuperStore:times')
+            console.log('value', value)
+            this.setState({ text: value })
+          }}
+          title="Get"
+        />
+        <Text>{this.state.text}</Text>
+      </ScrollView>
     );
   }
 }
@@ -34,9 +83,8 @@ export default class AsyncStorageTimestamp extends Component {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: '#F5FCFF',
+    padding: 15,
   },
   welcome: {
     fontSize: 20,
